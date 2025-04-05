@@ -228,7 +228,7 @@ const BettingGame = () => {
             <p className="text-gray-600">Place your bets before timer ends</p>
           </div>
           
-          <CountdownTimer onComplete={handleCountdownComplete} />
+          <CountdownTimer seconds={60} roundNumber={currentRound} onComplete={handleCountdownComplete} />
         </div>
 
         {/* Last Results */}

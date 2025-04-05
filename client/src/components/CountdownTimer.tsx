@@ -1,81 +1,64 @@
-import { useEffect, useRef, useState } from 'react';
-import { useGameStore } from '@/store/gameStore';
+import React, { useEffect, useState } from 'react';
 import { formatTimeAmPm } from '@/lib/utils';
 
 interface CountdownTimerProps {
+  seconds: number;
+  roundNumber: number;
   onComplete?: () => void;
 }
 
-const CountdownTimer = ({ onComplete }: CountdownTimerProps) => {
-  const { countdown, setCountdown, nextDrawTime, setNextDrawTime } = useGameStore();
-  const [circumference] = useState(283); // 2 * PI * r where r is 45
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+const CountdownTimer: React.FC<CountdownTimerProps> = ({ seconds, roundNumber, onComplete }) => {
+  const [timeLeft, setTimeLeft] = useState(seconds);
+  const [nextDraw, setNextDraw] = useState('');
 
-  // Calculate next draw time
+  // Initialize time
   useEffect(() => {
+    setTimeLeft(seconds);
+    
+    // Calculate next draw time
     const now = new Date();
-    const nextDraw = new Date(now.getTime() + countdown * 1000);
-    setNextDrawTime(formatTimeAmPm(nextDraw));
-  }, [countdown, setNextDrawTime]);
+    const nextDrawTime = new Date(now.getTime() + seconds * 1000);
+    setNextDraw(formatTimeAmPm(nextDrawTime));
+  }, [seconds]);
 
   // Set up countdown timer
   useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        const newValue = prev - 1;
-        if (newValue <= 0) {
-          // Reset timer to 60 seconds
-          const resetValue = 60;
-          
-          // Call onComplete callback
+    if (timeLeft <= 0) return;
+    
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
           if (onComplete) {
             onComplete();
           }
-          
-          // Calculate new draw time
-          const now = new Date();
-          const nextDraw = new Date(now.getTime() + resetValue * 1000);
-          setNextDrawTime(formatTimeAmPm(nextDraw));
-          
-          return resetValue;
+          return 0;
         }
-        return newValue;
+        return prev - 1;
       });
     }, 1000);
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [setCountdown, setNextDrawTime, onComplete]);
+    return () => clearInterval(timer);
+  }, [timeLeft, onComplete]);
 
-  // Calculate stroke dashoffset based on countdown
-  const dashOffset = circumference - (countdown / 60) * circumference;
+  // Format time
+  const minutes = Math.floor(timeLeft / 60);
+  const remainingSeconds = timeLeft % 60;
 
   return (
-    <div className="flex items-center space-x-4">
-      <div className="relative w-16 h-16">
-        <svg className="w-full h-full" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="45" fill="none" stroke="#e0e0e0" strokeWidth="8"></circle>
-          <circle 
-            cx="50" 
-            cy="50" 
-            r="45" 
-            fill="none" 
-            stroke="#3f51b5" 
-            strokeWidth="8" 
-            className="countdown-animation" 
-            style={{ strokeDashoffset: dashOffset }}
-          ></circle>
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-[#3f51b5]">
-          {countdown}
+    <div className="flex items-center justify-end">
+      <div className="text-white text-lg">Time</div>
+      <div className="ml-2 flex items-center">
+        <div className="bg-white rounded-md px-3 py-1 text-xl font-bold mx-0.5">
+          {minutes < 10 ? "0" + minutes : minutes}
+        </div>
+        <div className="mx-0.5 text-white font-bold">:</div>
+        <div className="bg-white rounded-md px-3 py-1 text-xl font-bold mx-0.5">
+          {remainingSeconds < 10 ? "0" + remainingSeconds : remainingSeconds}
         </div>
       </div>
-      <div className="text-center">
-        <div className="text-sm text-gray-500">Next Result</div>
-        <div className="font-bold text-lg">{nextDrawTime}</div>
+      <div className="ml-3 text-xs text-white opacity-70">
+        {roundNumber.toString().padStart(5, '0')}
       </div>
     </div>
   );

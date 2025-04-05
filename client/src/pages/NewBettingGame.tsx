@@ -5,54 +5,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { BetSelection, FormattedResult, GameRound } from "@/lib/types";
 import { calculatePotentialWin, formatGameResult, getNumberColor, getNumberSize } from "@/lib/utils";
+import CountdownTimer from "@/components/CountdownTimer";
 
 const numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-
-interface CountdownProps {
-  seconds: number;
-  roundNumber: number;
-}
-
-const Countdown: React.FC<CountdownProps> = ({ seconds, roundNumber }) => {
-  const [timeLeft, setTimeLeft] = useState(seconds);
-
-  useEffect(() => {
-    if (seconds <= 0) return;
-    
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [seconds]);
-
-  const minutes = Math.floor(timeLeft / 60);
-  const remainingSeconds = timeLeft % 60;
-
-  return (
-    <div className="flex items-center justify-end">
-      <div className="text-white text-lg">Time</div>
-      <div className="ml-2 flex items-center">
-        <div className="bg-white rounded-md px-3 py-1 text-xl font-bold mx-0.5">
-          {minutes < 10 ? "0" + minutes : minutes}
-        </div>
-        <div className="mx-0.5 text-white font-bold">:</div>
-        <div className="bg-white rounded-md px-3 py-1 text-xl font-bold mx-0.5">
-          {remainingSeconds < 10 ? "0" + remainingSeconds : remainingSeconds}
-        </div>
-      </div>
-      <div className="ml-3 text-xs text-white opacity-70">
-        {roundNumber.toString().padStart(5, '0')}
-      </div>
-    </div>
-  );
-};
 
 const ResultBall: React.FC<{ number: number; small?: boolean }> = ({ number, small = false }) => {
   const color = getNumberColor(number);
@@ -219,6 +174,13 @@ const NewBettingGame: React.FC = () => {
       className: "bg-pink-200 border-0 text-black font-medium",
     });
   };
+  
+  // Function to handle countdown completion
+  const handleCountdownComplete = () => {
+    // Refresh game data when countdown completes
+    queryClient.invalidateQueries({ queryKey: ['/api/rounds/latest'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/bets/user'] });
+  };
 
   return (
     <div className="bg-white min-h-screen">
@@ -277,7 +239,7 @@ const NewBettingGame: React.FC = () => {
               <ResultBall number={latestResults[0].result} />
             )}
           </div>
-          <Countdown seconds={60} roundNumber={currentRound} />
+          <CountdownTimer seconds={60} roundNumber={currentRound} onComplete={handleCountdownComplete} />
         </div>
         
         {/* Previous Results */}
