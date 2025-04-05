@@ -1,0 +1,26 @@
+# GitHub Pages Deployment Guide for BettingChallenge
+
+## What we've fixed
+
+1. Added redirect scripts in 404.html for proper client-side routing
+2. Updated App.tsx to use the base path from environment variables
+3. Created .env.production file with the correct base path (VITE_BASE_PATH=/BettingChallenge/)
+4. Fixed infinite update loop in MobileBettingGame.tsx
+
+## How to deploy
+
+1. Commit and push your changes to GitHub
+2. Run: npm run deploy
+3. In GitHub repository settings:
+   - Go to Settings > Pages
+   - Source: Deploy from a branch
+   - Branch: gh-pages
+   - Folder: / (root)
+
+## Testing deployment
+
+Visit: https://suk511.github.io/BettingChallenge/
+
+## Admin access
+
+Admin panel can be accessed at: https://suk511.github.io/BettingChallenge/adminpanel

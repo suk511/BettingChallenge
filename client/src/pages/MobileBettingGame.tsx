@@ -110,7 +110,8 @@ const MobileBettingGame: React.FC = () => {
         setCurrentRound(maxRoundNumber + 1);
       }
     }
-  }, [roundsData, currentRound]);
+    // Remove currentRound from the dependencies to avoid infinite loop
+  }, [roundsData]);
 
   useEffect(() => {
     if (betsData) {

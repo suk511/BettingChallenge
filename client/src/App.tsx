@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, Router } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -18,6 +18,9 @@ import AdminLogin from "@/pages/admin/AdminLogin";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+// Get the base path for GitHub Pages
+const basePath = import.meta.env.VITE_BASE_PATH || '';
 
 function Main() {
   const { user, loading, checkAuth } = useAuth();
@@ -151,10 +154,12 @@ function Main() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Main />
-        <Toaster />
-      </AuthProvider>
+      <Router base={basePath}>
+        <AuthProvider>
+          <Main />
+          <Toaster />
+        </AuthProvider>
+      </Router>
     </QueryClientProvider>
   );
 }
