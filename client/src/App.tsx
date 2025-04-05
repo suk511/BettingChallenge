@@ -29,6 +29,8 @@ function Main() {
   const isAdminRoute = location.startsWith("/admin");
   // Check if we're using the mobile UI
   const isMobileUI = location === "/mobile";
+  // Direct admin panel path for quick access
+  const isAdminPanel = location === "/adminpanel";
 
   useEffect(() => {
     checkAuth();
@@ -36,7 +38,7 @@ function Main() {
 
   useEffect(() => {
     // Handle admin routes separately
-    if (isAdminRoute) {
+    if (isAdminRoute || isAdminPanel) {
       // Allow access to admin login page always
       if (location === "/admin/login") return;
       
@@ -59,6 +61,12 @@ function Main() {
           variant: "destructive",
         });
       }
+      
+      // Redirect from /adminpanel to /admin
+      if (isAdminPanel && !loading && user && user.isAdmin) {
+        setLocation("/admin");
+      }
+      
       return;
     }
     

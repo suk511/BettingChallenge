@@ -104,9 +104,13 @@ const MobileBettingGame: React.FC = () => {
       
       // Set current round number to be the last round number + 1
       const maxRoundNumber = Math.max(...roundsData.map((r: GameRound) => r.roundNumber));
-      setCurrentRound(maxRoundNumber + 1);
+      
+      // Only update if the round number has actually changed
+      if (maxRoundNumber + 1 !== currentRound) {
+        setCurrentRound(maxRoundNumber + 1);
+      }
     }
-  }, [roundsData]);
+  }, [roundsData, currentRound]);
 
   useEffect(() => {
     if (betsData) {
@@ -145,30 +149,75 @@ const MobileBettingGame: React.FC = () => {
     }
   });
 
+  // State for bet prompt
+  const [showBetPrompt, setShowBetPrompt] = useState(false);
+  const [tempBetType, setTempBetType] = useState<'number' | 'color' | 'size' | null>(null);
+  const [tempBetValue, setTempBetValue] = useState<string>("");
+  const [tempMultiplier, setTempMultiplier] = useState<number>(1);
+  const [customBetAmount, setCustomBetAmount] = useState<number>(0);
+  
+  // Predefined bet amounts
+  const predefinedAmounts = [100, 500, 1000];
+  
+  // Multiplier options
+  const multiplierOptions = [1, 2, 5, 10, 50];
+
   // Handle bet selections
   const handleSelectNumber = (number: number) => {
-    setSelectedBet({
-      type: 'number',
-      value: number.toString(),
-      multiplier: 10
-    });
+    setTempBetType('number');
+    setTempBetValue(number.toString());
+    setTempMultiplier(10); // Default multiplier for numbers
+    setShowBetPrompt(true);
   };
 
   const handleSelectColor = (color: string) => {
-    const multiplier = color === 'violet' ? 3 : 2;
-    setSelectedBet({
-      type: 'color',
-      value: color,
-      multiplier
-    });
+    setTempBetType('color');
+    setTempBetValue(color);
+    setTempMultiplier(color === 'violet' ? 3 : 2); // Default multiplier for colors
+    setShowBetPrompt(true);
   };
 
   const handleSelectSize = (size: string) => {
+    setTempBetType('size');
+    setTempBetValue(size);
+    setTempMultiplier(2); // Default multiplier for sizes
+    setShowBetPrompt(true);
+  };
+  
+  // Confirm the bet from the prompt
+  const confirmBet = (amount: number) => {
+    if (!tempBetType || !tempBetValue) return;
+    
     setSelectedBet({
-      type: 'size',
-      value: size,
-      multiplier: 2
+      type: tempBetType,
+      value: tempBetValue,
+      multiplier: tempMultiplier
     });
+    
+    setBetAmount(amount);
+    setShowBetPrompt(false);
+    
+    // Auto-place bet if configured
+    if (user && amount > 0 && amount <= user.balance) {
+      placeBetMutation.mutate({
+        roundId: currentRound,
+        betType: tempBetType,
+        betValue: tempBetValue,
+        amount: amount,
+        potentialWin: calculatePotentialWin(amount, {
+          type: tempBetType,
+          value: tempBetValue,
+          multiplier: tempMultiplier
+        }),
+        status: "pending"
+      });
+    }
+  };
+  
+  // Handle custom bet amount with multiplier
+  const handleCustomBet = () => {
+    const finalAmount = customBetAmount * tempMultiplier;
+    confirmBet(finalAmount);
   };
 
   // Handle place bet
@@ -229,7 +278,7 @@ const MobileBettingGame: React.FC = () => {
         <h1 className="text-xl font-bold">{user?.username || "User"}</h1>
         <div className="flex space-x-3">
           {user?.isAdmin && (
-            <a href="/admin" className="text-white">
+            <a href="/adminpanel" className="text-white">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -405,6 +454,108 @@ const MobileBettingGame: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Bet Prompt Modal */}
+      {showBetPrompt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-11/12 p-4 shadow-lg">
+            <h3 className="text-xl font-bold text-center mb-4">
+              Place Bet
+            </h3>
+            
+            <div className="flex items-center justify-center mb-4">
+              {tempBetType === 'number' && (
+                <div className={`w-16 h-16 rounded-full ${getBgColorClass(getNumberColor(parseInt(tempBetValue)))} flex items-center justify-center text-white text-2xl font-bold`}>
+                  {tempBetValue}
+                </div>
+              )}
+              {tempBetType === 'color' && (
+                <div className={`w-16 h-16 rounded-full ${getBgColorClass(tempBetValue)} flex items-center justify-center text-white text-lg font-bold`}>
+                  {tempBetValue.charAt(0).toUpperCase() + tempBetValue.slice(1)}
+                </div>
+              )}
+              {tempBetType === 'size' && (
+                <div className={`w-16 h-16 rounded-full ${tempBetValue === 'big' ? 'bg-orange-500' : 'bg-blue-500'} flex items-center justify-center text-white text-xl font-bold`}>
+                  {tempBetValue.charAt(0).toUpperCase() + tempBetValue.slice(1)}
+                </div>
+              )}
+            </div>
+            
+            <h4 className="font-semibold text-center mb-2">Choose amount</h4>
+            
+            {/* Predefined amounts */}
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {predefinedAmounts.map(amount => (
+                <button 
+                  key={amount}
+                  onClick={() => confirmBet(amount * tempMultiplier)}
+                  className="bg-green-500 text-white py-2 rounded-lg font-bold"
+                >
+                  ₹{amount.toLocaleString()}
+                </button>
+              ))}
+            </div>
+            
+            {/* Custom amount */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Custom amount</label>
+              <div className="flex">
+                <input
+                  type="number"
+                  min="10"
+                  value={customBetAmount}
+                  onChange={(e) => setCustomBetAmount(Math.max(10, Number(e.target.value)))}
+                  className="w-full rounded-l-lg border border-gray-300 px-3 py-2"
+                  placeholder="Enter amount"
+                />
+                <button
+                  onClick={handleCustomBet}
+                  className="bg-blue-500 text-white px-4 rounded-r-lg font-bold"
+                >
+                  Bet
+                </button>
+              </div>
+            </div>
+            
+            {/* Multiplier options */}
+            <h4 className="font-semibold text-center mb-2">Multiplier</h4>
+            <div className="grid grid-cols-5 gap-2 mb-4">
+              {multiplierOptions.map(mult => (
+                <button
+                  key={mult}
+                  onClick={() => setTempMultiplier(mult)}
+                  className={`py-2 rounded-lg font-medium ${
+                    tempMultiplier === mult 
+                      ? 'bg-purple-600 text-white' 
+                      : 'bg-gray-200 text-gray-800'
+                  }`}
+                >
+                  {mult}x
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex justify-between items-center border-t pt-3">
+              <div>
+                <p className="text-sm font-medium">Potential win: 
+                  <span className="ml-1 text-green-600 font-bold">
+                    ₹{calculatePotentialWin(
+                      customBetAmount > 0 ? customBetAmount * tempMultiplier : predefinedAmounts[0] * tempMultiplier, 
+                      {type: tempBetType!, value: tempBetValue, multiplier: tempMultiplier}
+                    ).toLocaleString()}
+                  </span>
+                </p>
+              </div>
+              <button
+                onClick={() => setShowBetPrompt(false)}
+                className="bg-red-500 text-white px-4 py-2 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Game/My History Tabs */}
       <div className="mx-3 mb-3">
