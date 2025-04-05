@@ -19,9 +19,10 @@ const ResultBall: React.FC<{ number: number; small?: boolean }> = ({ number, sma
 
   return (
     <div 
-      className={`${bgColor} rounded-full flex items-center justify-center text-white font-bold ${
-        small ? 'w-8 h-8 text-lg' : 'w-12 h-12 text-2xl'
+      className={`${bgColor} rounded-full flex items-center justify-center text-white font-bold shadow-md ${
+        small ? 'w-8 h-8 text-lg' : 'w-14 h-14 text-2xl border-2 border-white'
       }`}
+      style={{ boxShadow: small ? '0 2px 4px rgba(0,0,0,0.2)' : '0 3px 6px rgba(0,0,0,0.3)' }}
     >
       {number}
     </div>
@@ -75,9 +76,11 @@ const NewBettingGame: React.FC = () => {
       // Update the user bets query cache
       queryClient.invalidateQueries({ queryKey: ['/api/bets/user'] });
       
+      // Display success toast with custom styling to match the design
       toast({
-        title: "Success!",
-        description: "Your bet has been placed successfully.",
+        title: "Bet Placed",
+        description: `Successfully placed a bet of ₹${betAmount} on ${selectedBet?.value}`,
+        className: "bg-pink-100 border-0 text-black font-medium p-4 rounded-xl shadow-md",
       });
       
       // Reset selection after successful bet
@@ -232,17 +235,21 @@ const NewBettingGame: React.FC = () => {
 
       {/* Game Result Section */}
       <div className="bg-gradient-to-r from-purple-800 to-red-600 rounded-xl mx-3 my-2 p-4 shadow-md">
-        <div className="flex justify-between">
-          <div className="flex items-center space-x-3">
+        <div className="flex justify-between items-center">
+          <div>
             <p className="text-white text-lg">Result:</p>
-            {latestResults.length > 0 && (
-              <ResultBall number={latestResults[0].result} />
-            )}
+            <div className="flex mt-2">
+              {latestResults.length > 0 && (
+                <ResultBall number={latestResults[0].result} />
+              )}
+            </div>
           </div>
-          <CountdownTimer seconds={60} roundNumber={currentRound} onComplete={handleCountdownComplete} />
+          <div>
+            <CountdownTimer seconds={60} roundNumber={currentRound} onComplete={handleCountdownComplete} />
+          </div>
         </div>
         
-        {/* Previous Results */}
+        {/* Previous Results - Display previous numbers in a row */}
         <div className="flex mt-4 justify-center space-x-3">
           {lastThreeResults.slice(1).map((result, index) => (
             <ResultBall key={index} number={result} small />
@@ -403,26 +410,42 @@ const NewBettingGame: React.FC = () => {
         </div>
       </div>
 
-      {/* Game History */}
+      {/* Game History Tabs */}
       <div className="mx-3 my-4 mb-20">
-        <div className="bg-red-500 text-white py-3 px-4 rounded-t-xl grid grid-cols-3 shadow-md">
-          <div className="text-center font-bold">Number</div>
-          <div className="text-center font-bold">Color</div>
-          <div className="text-center font-bold">Size</div>
+        <div className="grid grid-cols-2 gap-0">
+          <button 
+            className="bg-red-500 text-white py-3 px-4 rounded-tl-xl font-bold shadow"
+          >
+            Game history
+          </button>
+          <button 
+            className="bg-white text-gray-700 py-3 px-4 rounded-tr-xl font-bold border-t border-r border-gray-200"
+          >
+            My history
+          </button>
         </div>
-        <div className="bg-white rounded-b-xl divide-y divide-gray-100 shadow-md">
-          {latestResults.slice(0, 5).map((result, index) => (
-            <div key={index} className="py-3 px-4 grid grid-cols-3">
-              <div className="flex justify-center">
-                <ResultBall number={result.result} small />
+        
+        {/* Game History Table */}
+        <div className="bg-white shadow-md">
+          <div className="py-3 px-4 border-b grid grid-cols-3 text-gray-500 font-medium">
+            <div className="text-center">Number</div>
+            <div className="text-center">Color</div>
+            <div className="text-center">Size</div>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {latestResults.slice(0, 5).map((result, index) => (
+              <div key={index} className="py-3 px-4 grid grid-cols-3">
+                <div className="flex justify-center">
+                  <ResultBall number={result.result} small />
+                </div>
+                <div className="text-center self-center capitalize font-medium">{result.resultColor}</div>
+                <div className="text-center self-center capitalize font-medium">{result.resultSize}</div>
+                <div className="col-span-3 text-center text-xs text-gray-500 mt-1">
+                  {result.roundNumber.toString().padStart(5, '0')}
+                </div>
               </div>
-              <div className="text-center self-center capitalize font-medium">{result.resultColor}</div>
-              <div className="text-center self-center capitalize font-medium">{result.resultSize}</div>
-              <div className="col-span-3 text-center text-xs text-gray-500 mt-1">
-                {result.roundNumber.toString().padStart(5, '0')}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
