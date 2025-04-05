@@ -9,6 +9,7 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import BettingGame from "@/pages/BettingGame";
 import NewBettingGame from "@/pages/NewBettingGame";
+import MobileBettingGame from "@/pages/MobileBettingGame";
 import GameHistory from "@/pages/GameHistory";
 import AdminPanel from "@/pages/AdminPanel";
 import Login from "@/pages/Login";
@@ -16,11 +17,13 @@ import Support from "@/pages/Support";
 import AdminLogin from "@/pages/admin/AdminLogin";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 function Main() {
   const { user, loading, checkAuth } = useAuth();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const isMobileDevice = useIsMobile();
   
   // Check if we're on an admin route
   const isAdminRoute = location.startsWith("/admin");
@@ -101,14 +104,14 @@ function Main() {
     );
   }
   
-  // For mobile UI path, show the mobile interface without sidebar/header
-  if (isMobileUI) {
+  // For mobile UI path or if on a mobile device, show the mobile interface without sidebar/header
+  if (isMobileUI || isMobileDevice) {
     // Show login for mobile UI when not authenticated
     if (!user) {
       return <Login />;
     }
     
-    return <NewBettingGame />;
+    return <MobileBettingGame />;
   }
 
   // Standard user login check for main site
