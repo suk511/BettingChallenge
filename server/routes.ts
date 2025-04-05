@@ -3,62 +3,12 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { insertBetSchema, insertUserSchema } from "@shared/schema";
-import session from "express-session";
-import MemoryStore from "memorystore";
+import { setupAuth } from "./auth";
 import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
-
-// Set up session store
-const MemoryStoreSession = MemoryStore(session);
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Set up sessions
-  app.use(
-    session({
-      cookie: { maxAge: 86400000 }, // 24 hours
-      store: new MemoryStoreSession({
-        checkPeriod: 86400000, // prune expired entries every 24h
-      }),
-      resave: false,
-      secret: process.env.SESSION_SECRET || "betmaster-secret-key",
-      saveUninitialized: false,
-    })
-  );
-
-  // Initialize passport
-  app.use(passport.initialize());
-  app.use(passport.session());
-
-  // Configure passport
-  passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        const user = await storage.getUserByUsername(username);
-        if (!user) {
-          return done(null, false, { message: "Incorrect username" });
-        }
-        if (user.password !== password) {
-          return done(null, false, { message: "Incorrect password" });
-        }
-        return done(null, user);
-      } catch (err) {
-        return done(err);
-      }
-    })
-  );
-
-  passport.serializeUser((user: any, done) => {
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      const user = await storage.getUser(id);
-      done(null, user);
-    } catch (err) {
-      done(err);
-    }
-  });
+  // Set up authentication
+  setupAuth(app);
 
   // Authentication middleware
   const isAuthenticated = (req: Request, res: Response, next: Function) => {
@@ -76,71 +26,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(403).json({ message: "Forbidden" });
   };
 
-  // AUTHENTICATION ROUTES
-  app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: any, info: any) => {
-      if (err) {
-        return next(err);
-      }
-      if (!user) {
-        return res.status(401).json({ message: info.message });
-      }
-      req.logIn(user, (err) => {
-        if (err) {
-          return next(err);
-        }
-        return res.status(200).json({
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          balance: user.balance,
-          isAdmin: user.isAdmin,
-        });
-      });
-    })(req, res, next);
-  });
-
-  app.post("/api/register", async (req, res) => {
-    try {
-      const userData = insertUserSchema.parse(req.body);
-      
-      // Check if username already exists
-      const existingUser = await storage.getUserByUsername(userData.username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-
-      const user = await storage.createUser(userData);
-      res.status(201).json({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        balance: user.balance,
-        isAdmin: user.isAdmin,
-      });
-    } catch (error) {
-      res.status(400).json({ message: "Invalid user data", error });
-    }
-  });
-
+  // API /api/user endpoint is included in auth.ts
+  // Map /api/me to /api/user for backward compatibility
   app.get("/api/me", isAuthenticated, (req, res) => {
-    const user = req.user as any;
-    res.json({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      balance: user.balance,
-      isAdmin: user.isAdmin,
-    });
-  });
-
-  app.post("/api/logout", (req, res) => {
-    req.logout((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Error logging out" });
-      }
-      res.json({ message: "Logged out successfully" });
-    });
+    if (req.user) {
+      // Remove password from the response
+      const { password, ...userWithoutPassword } = req.user;
+      res.json(userWithoutPassword);
+    } else {
+      res.sendStatus(401);
+    }
   });
 
   // GAME ROUTES
