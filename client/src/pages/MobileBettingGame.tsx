@@ -94,7 +94,7 @@ const MobileBettingGame: React.FC = () => {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [queryClient]);
+  }, []); // queryClient is stable, no need to add it to dependencies
 
   // Process data when it loads
   useEffect(() => {
